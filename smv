@@ -1,0 +1,148 @@
+#!/bin/sh
+#
+# smv file | dir newName  - safe rename
+#
+# smv item ... dir - safe mv files and / or dirs to dir
+#
+# Fri Oct 3 13:24:58 BST 2014
+#
+
+
+<<'______________D__O__C__U__M__E__N__T__A__T__I__O__N_____________'
+
+Copyright (C) 2014 Peter Scott - p.scott@shu.ac.uk
+
+Licence
+-------
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+Description
+-----------
+
+  `smv' is a safe version of the `mv' command; it does not overwrite
+  existing files or directories.  It issues error messages when problems
+  occur.
+
+Rationale
+---------
+
+  You can use the -n or --no-clobber option of `mv' to avoid overwriting
+  existing files.  However, `mv' will not notify you that it has failed
+  to move something.  `smv' issues an error message in such a case.
+
+
+______________D__O__C__U__M__E__N__T__A__T__I__O__N_____________
+
+
+# usage - display usage message
+#
+usage(){
+  cat <<-! >&2
+	Usage: $NAME file | dir newName
+	   or: $NAME item ... dir
+	!
+  exit 1
+}
+
+
+# checkSimple file - check file is plain, readable, not empty (Bourne)
+#
+checkSimple(){
+  file=$1
+  ls "$file" > /dev/null 2>&1
+  if [ $? -ne 0 ]
+  then echo "$NAME: $file: does not exist" >&2
+       return 1
+  elif [ -d "$file" ]
+  then echo "$NAME: $file: is a directory" >&2
+       return 2
+  elif [ ! -r "$file" ]
+  then echo "$NAME: $file: is not readable" >&2
+       return 3
+  elif [ ! -s "$file" ]
+  then echo "$NAME: $file: is empty" >&2
+       return 4
+  else
+       return 0
+  fi
+}
+
+
+# prevent the user giving the script a name with white space in it
+# -- saving the hassle of quoting internal file names
+#
+NAME=`basename "$0"`
+words=`echo "$NAME" | wc -w`
+if [ $words -ne 1 ]
+then echo "\`$0': I don't allow white space in command names" >&2
+     exit 3
+fi
+test "$2" || usage
+for arg
+do   dest=$arg
+done
+checkSimple "$dest" 2> /dev/null
+case $? in
+     0 | 3 | 4)
+         echo "$NAME: $dest: is an existing file" >&2
+         exit 3
+         ;;
+
+     2)  # existing dir -- OK for moving to
+         #
+         test $# -eq 2 && warning=true
+         ;;
+
+     1)  # dest doesn't exist -- OK for a quick rename
+         #
+         if [ $# -ne 2 ]
+         then echo "$NAME: $dest: must be an existing directory" >&2
+              exit 4
+         else item=$1
+              checkSimple "$item" 2> /dev/null
+              case $? in
+                   1 | 3)
+                       checkSimple "$item"
+                       exit `expr $? + 10`
+                       ;;
+              esac
+              mv "$item" "$dest"
+              exit
+         fi
+         ;;
+esac
+count=0
+for arg
+do   count=`expr $count + 1`       # count to avoid last arg
+     if [ $count -ne $# ]
+     then checkSimple "$arg" 2> /dev/null
+          case $? in
+               1 | 3)
+                   checkSimple "$arg"
+                   exit `expr $? + 20`
+                   ;;
+          esac
+          checkSimple "$dest/$arg" 2> /dev/null
+          case $? in
+               1)   mv "$arg" "$dest"
+                    moved=true
+                    ;;
+               *)   echo "$NAME: $dest/$arg: already exists" >&2
+          esac
+     fi
+done
+if [ "$warning" ] && [ "$moved" ]
+then echo "$NAME: warning: moved one item to existing directory" >&2
+fi
