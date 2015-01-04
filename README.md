@@ -1,5 +1,5 @@
-smv
-===
+sfmv
+====
 
 safe version of Unix's mv command
 
