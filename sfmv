@@ -6,7 +6,7 @@
 # sfcp item ... dir - safe cp files and / or dirs to dir
 # sfmv item ... dir - safe mv files and / or dirs to dir
 #
-# Fri Dec 12 13:52:12 GMT 2014
+# Sun Jan 4 22:59:36 GMT 2015
 #
 
 
@@ -95,7 +95,7 @@ then echo "\`$NAME': I don't allow white space in command names" >&2
 fi
 test "$2" || usage
 case $NAME in
-     *cp) command=cp
+     *cp) command='cp -r'   # items may be dirs
           action=copied
           ;;
      *mv) command=mv
@@ -119,7 +119,7 @@ case $? in
          test $# -eq 2 && warning=true
          ;;
 
-     1)  # dest doesn't exist -- OK for a quick rename
+     1)  # dest doesn't exist -- OK for a simple rename or copy
          #
          if [ $# -ne 2 ]
          then echo "$NAME: $dest: must be an existing directory" >&2
