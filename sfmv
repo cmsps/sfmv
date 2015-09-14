@@ -6,7 +6,7 @@
 # sfcp item ... dir - safe cp files and / or dirs to dir
 # sfmv item ... dir - safe mv files and / or dirs to dir
 #
-# Mon Jan 12 13:11:20 GMT 2015
+# Tue Sep 8 22:06:27 BST 2015
 #
 
 
@@ -42,9 +42,9 @@ Rationale
 ---------
 
   You can use the -n or --no-clobber option of `mv' or `cp' to avoid
-  overwriting existing files.  However, they will not notify you that
-  they have failed to move or copy something.  `sfmv' issues an error
-  message in such a case.
+  overwriting existing files.  However, those commands do not notify
+  you that they have failed to move or copy something.  `sfmv' issues
+  an error message in such a case.
 
 
 ______________D__O__C__U__M__E__N__T__A__T__I__O__N_____________
@@ -54,8 +54,12 @@ ______________D__O__C__U__M__E__N__T__A__T__I__O__N_____________
 #
 usage(){
   cat <<-! >&2
-	Usage: $NAME file | dir newName
-	   or: $NAME item ... dir
+	Usage: $NAME [ -wh ] file | dir newName
+	   or: $NAME [ -wh ] item ... dir
+
+	Options:
+	  -h  this help
+	  -w  no warning
 	!
   exit 1
 }
@@ -67,20 +71,20 @@ checkSimple(){
   file=$1
   ls "$file" > /dev/null 2>&1
   if [ $? -ne 0 ]
-  then echo "$NAME: $file: does not exist" >&2
+  then echo "$NAME: $file: does not exist"
        return 1
   elif [ -d "$file" ]
-  then echo "$NAME: $file: is a directory" >&2
+  then echo "$NAME: $file: is a directory"
        return 2
   elif [ ! -r "$file" ]
-  then echo "$NAME: $file: is not readable" >&2
+  then echo "$NAME: $file: is not readable"
        return 3
   elif [ ! -s "$file" ]
-  then echo "$NAME: $file: is empty" >&2
+  then echo "$NAME: $file: is empty"
        return 4
   else
        return 0
-  fi
+  fi >&2
 }
 
 
@@ -93,7 +97,9 @@ if [ $words -ne 1 ]
 then echo "\`$NAME': I don't allow white space in command names" >&2
      exit 2
 fi
-test "$2" || usage
+
+# moving or copying?
+#
 case $NAME in
   *cp)
      command='cp -r'   # items may be dirs
@@ -103,44 +109,76 @@ case $NAME in
      command=mv
      action=moved
      ;;
-  *) echo "\`$NAME': must end with \`cp' or \`mv'" >&2
+  *)
+     echo "\`$NAME': must end with \`cp' or \`mv'" >&2
      exit 3
 esac
+
+# process command line options
+#
+while getopts ':hw' option
+do   case $option in
+       h) usage ;;
+       w) warning=no ;;
+      \?) echo "$NAME: unknown option: \`$OPTARG'" >&2
+          usage
+     esac
+done
+shift `expr $OPTIND - 1`
+
+# get last arg -- destination
+#
+test "$2" || usage
 for arg
 do   dest="$arg"
 done
+
+# do nothing here if destination is an existing dir
+#
 checkSimple "$dest" 2> /dev/null
 case $? in
   0 | 3 | 4)
-     echo "$NAME: $dest: is an existing file" >&2
+     echo "$NAME: $dest: existing file" >&2
      exit 4
      ;;
 
-  2) # existing dir -- OK for moving or copying into
-     #
-     test $# -eq 2 && warning=true
-     ;;
-
-  1) # dest doesn't exist -- OK for a simple rename (or move) or copy
+  1) # dest doesn't exist -- could be a rename or copy if only two args
      #
      if [ $# -ne 2 ]
-     then echo "$NAME: $dest: must be an existing directory" >&2
+     then echo "$NAME: $dest: not an existing directory" >&2
           exit 5
-     else item=$1
-          checkSimple "$item" 2> /dev/null
-          case $? in
-            1 | 3)
-               checkSimple "$item"
-               exit `expr $? + 10`
-          esac
-          $command "$item" "$dest"
-          exit
      fi
+
+     # check item exists and readable
+     #
+     item=$1
+     checkSimple "$item" 2> /dev/null
+     case $? in
+       1 | 3)
+          checkSimple "$item"
+          exit `expr $? + 10`
+     esac
+
+     # check destination dir exists
+     #
+     dir=`dirname "$dest"`
+     if [ ! -d "$dir" ]
+     then echo "$NAME: $dir: not an existing directory" >&2
+          exit 6
+     fi
+
+     # do simple command and finish
+     #
+     $command "$item" "$dest"
+     exit 0
 esac
+
+# process all args but last one -- destination
+#
 count=0
 for arg
 do   count=`expr $count + 1`
-     if [ $count -ne $# ]                     # avoid last arg -- destination
+     if [ $count -ne $# ]
      then checkSimple "$arg" 2> /dev/null
           case $? in
             1 | 3)
@@ -156,6 +194,9 @@ do   count=`expr $count + 1`
           esac
      fi
 done
-if [ "$warning" ] && [ "$actioned" ]
+
+# issue warning if needed
+#
+if [ $# -eq 2 ] && [ "$warning" != no ] && [ "$actioned" ]
 then echo "$NAME: warning: $action one item to existing directory" >&2
 fi
