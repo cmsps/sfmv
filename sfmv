@@ -1,12 +1,12 @@
 #!/bin/sh
 #
-# sfcp file | dir newName  - safe cp
-# sfmv file | dir newName  - safe rename (or move)
+# sfcp file | dir newName  - safe cp (copy)
+# sfmv file | dir newName  - safe mv (rename)
 #
 # sfcp item ... dir - safe cp files and / or dirs to dir
 # sfmv item ... dir - safe mv files and / or dirs to dir
 #
-# Tue Sep 8 22:06:27 BST 2015
+# Wed Mar 16 19:22:44 GMT 2016
 #
 
 
@@ -88,7 +88,7 @@ checkSimple(){
 }
 
 
-# prevent the user giving the script a name with white space in it
+# prevent the user giving the script a name containing white space
 # -- saving the hassle of quoting internal file names
 #
 NAME=`basename "$0"`
@@ -159,7 +159,7 @@ case $? in
           exit `expr $? + 10`
      esac
 
-     # check destination dir exists
+     # check dir part (it may only be `.') of destination exists
      #
      dir=`dirname "$dest"`
      if [ ! -d "$dir" ]
