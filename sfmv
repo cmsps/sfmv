@@ -6,7 +6,7 @@
 # sfcp item ... dir - safe cp files and / or dirs to dir
 # sfmv item ... dir - safe mv files and / or dirs to dir
 #
-# Wed Mar 16 19:22:44 GMT 2016
+# Wed Oct 12 13:58:55 BST 2016
 #
 
 
@@ -29,22 +29,26 @@ Licence
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 Description
 -----------
-
   `sfmv' is a safe version of the `mv' command; it does not overwrite
   existing files or directories.  It issues error messages when problems
   occur.  If it is run under a name ending with "cp" it is a safe version
   of the `cp' command.
 
+  Also, `sfmv' warns what the effect of the command was when there are
+  only two arguments and the second is not a directory.
+
 Rationale
 ---------
-
   You can use the -n or --no-clobber option of `mv' or `cp' to avoid
   overwriting existing files.  However, those commands do not notify
   you that they have failed to move or copy something.  `sfmv' issues
   an error message in such a case.
+
+  Also, `mv' is overloaded in that it does renames as well as moves.
+  For clarity, `sfmv' issues a warning when it does more than move or
+  copy a file to a specified directory.
 
 
 ______________D__O__C__U__M__E__N__T__A__T__I__O__N_____________
@@ -59,7 +63,7 @@ usage(){
 
 	Options:
 	  -h  this help
-	  -w  no warning
+	  -w  no warning if not simple transfer to specified directory
 	!
   exit 1
 }
@@ -70,17 +74,17 @@ usage(){
 checkSimple(){
   file=$1
   ls "$file" > /dev/null 2>&1
-  if [ $? -ne 0 ]
-  then echo "$NAME: $file: does not exist"
+  if [ $? -ne 0 ] ;then
+       echo "$NAME: $file: does not exist"
        return 1
-  elif [ -d "$file" ]
-  then echo "$NAME: $file: is a directory"
+  elif [ -d "$file" ] ;then
+       echo "$NAME: $file: is a directory"
        return 2
-  elif [ ! -r "$file" ]
-  then echo "$NAME: $file: is not readable"
+  elif [ ! -r "$file" ] ;then
+       echo "$NAME: $file: is not readable"
        return 3
-  elif [ ! -s "$file" ]
-  then echo "$NAME: $file: is empty"
+  elif [ ! -s "$file" ] ;then
+       echo "$NAME: $file: is empty"
        return 4
   else
        return 0
@@ -93,8 +97,8 @@ checkSimple(){
 #
 NAME=`basename "$0"`
 words=`echo "$NAME" | wc -w`
-if [ $words -ne 1 ]
-then echo "\`$NAME': I don't allow white space in command names" >&2
+if [ $words -ne 1 ] ;then
+     echo "\`$NAME': I don't allow white space in command names" >&2
      exit 2
 fi
 
@@ -116,8 +120,8 @@ esac
 
 # process command line options
 #
-while getopts ':hw' option
-do   case $option in
+while getopts ':hw' option ;do
+     case $option in
        h) usage ;;
        w) warning=no ;;
       \?) echo "$NAME: unknown option: \`$OPTARG'" >&2
@@ -129,11 +133,11 @@ shift `expr $OPTIND - 1`
 # get last arg -- destination
 #
 test "$2" || usage
-for arg
-do   dest="$arg"
+for arg ;do
+     dest="$arg"
 done
 
-# do nothing here if destination is an existing dir
+# deal with destination not an existing dir (and finish)
 #
 checkSimple "$dest" 2> /dev/null
 case $? in
@@ -144,8 +148,8 @@ case $? in
 
   1) # dest doesn't exist -- could be a rename or copy if only two args
      #
-     if [ $# -ne 2 ]
-     then echo "$NAME: $dest: not an existing directory" >&2
+     if [ $# -ne 2 ] ;then
+          echo "$NAME: $dest: not an existing directory" >&2
           exit 5
      fi
 
@@ -159,27 +163,53 @@ case $? in
           exit `expr $? + 10`
      esac
 
-     # check dir part (it may only be `.') of destination exists
+     # check dir of destination exists (it may only be `.')
      #
-     dir=`dirname "$dest"`
-     if [ ! -d "$dir" ]
-     then echo "$NAME: $dir: not an existing directory" >&2
+     destDir=`dirname "$dest"`
+     if [ ! -d "$destDir" ] ;then
+          echo "$NAME: $destDir: not an existing directory" >&2
           exit 6
      fi
 
-     # do simple command and finish
+     # work out type of copy / rename / move
      #
-     $command "$item" "$dest"
+     sourceDir=`dirname "$item"`
+     if [ "$sourceDir$destDir" = .. ] ;then
+          test $action = moved && action=renamed
+          preposition=in
+          directory='the current'
+     elif [  "$sourceDir" = "$destDir" ] ;then
+          test $action = moved && action=renamed
+          preposition=in
+          directory=another
+     elif [ "$destDir" = . ] ;then
+          preposition=to
+          directory='the current'
+     else
+          preposition=to
+          directory=another
+     fi
+
+     # do simple command
+     #
+     $command "$item" "$dest" || exit $?
+
+     # display warning
+     #
+     if [ "$warning" != no ] ;then
+          printf "$NAME: warning: $action one item "
+          echo $preposition $directory directory
+     fi >&2
      exit 0
 esac
 
-# process all args but last one -- destination
+# process all arguments but last one
 #
 count=0
-for arg
-do   count=`expr $count + 1`
-     if [ $count -ne $# ]
-     then checkSimple "$arg" 2> /dev/null
+for arg ;do
+     count=`expr $count + 1`
+     if [ $count -ne $# ] ;then
+          checkSimple "$arg" 2> /dev/null
           case $? in
             1 | 3)
                checkSimple "$arg"
@@ -188,15 +218,9 @@ do   count=`expr $count + 1`
                item=`basename "$arg"`
                checkSimple "$dest/$item" 2> /dev/null
                case $? in
-                 1) $command "$arg" "$dest" && actioned=true ;;
+                 1) $command "$arg" "$dest" ;;
                  *) echo "$NAME: $dest/$item: already exists" >&2 ;;
                esac
           esac
      fi
 done
-
-# issue warning if needed
-#
-if [ $# -eq 2 ] && [ "$warning" != no ] && [ "$actioned" ]
-then echo "$NAME: warning: $action one item to existing directory" >&2
-fi
