@@ -6,7 +6,7 @@
 # sfcp item ... dir - safe cp files and / or dirs to dir
 # sfmv item ... dir - safe mv files and / or dirs to dir
 #
-# Wed Oct 12 13:58:55 BST 2016
+# Wed Oct 26 19:43:35 BST 2016
 #
 
 
@@ -47,8 +47,8 @@ Rationale
   an error message in such a case.
 
   Also, `mv' is overloaded in that it does renames as well as moves.
-  For clarity, `sfmv' issues a warning when it does more than move or
-  copy a file to a specified directory.
+  For clarity, `sfmv' issues a explanation when it does more than move
+  or copy a file to a directory given as the last argument.
 
 
 ______________D__O__C__U__M__E__N__T__A__T__I__O__N_____________
@@ -58,12 +58,12 @@ ______________D__O__C__U__M__E__N__T__A__T__I__O__N_____________
 #
 usage(){
   cat <<-! >&2
-	Usage: $NAME [ -wh ] file | dir newName
-	   or: $NAME [ -wh ] item ... dir
+	Usage: $NAME [ -qh ] file | dir newName
+	   or: $NAME [ -qh ] item ... dir
 
 	Options:
 	  -h  this help
-	  -w  no warning if not simple transfer to specified directory
+	  -q  quiet -- no explanations
 	!
   exit 1
 }
@@ -120,10 +120,10 @@ esac
 
 # process command line options
 #
-while getopts ':hw' option ;do
+while getopts ':hq' option ;do
      case $option in
        h) usage ;;
-       w) warning=no ;;
+       q) quiet=yes ;;
       \?) echo "$NAME: unknown option: \`$OPTARG'" >&2
           usage
      esac
@@ -174,19 +174,15 @@ case $? in
      # work out type of copy / rename / move
      #
      sourceDir=`dirname "$item"`
-     if [ "$sourceDir$destDir" = .. ] ;then
-          test $action = moved && action=renamed
-          preposition=in
-          directory='the current'
-     elif [  "$sourceDir" = "$destDir" ] ;then
-          test $action = moved && action=renamed
-          preposition=in
-          directory=another
-     elif [ "$destDir" = . ] ;then
+     if [ "$sourceDir" != "$destDir" ] ;then
           preposition=to
+     else
+          preposition=in
+          test $action = moved && action=renamed
+     fi
+     if [ "$destDir" = . ] ;then
           directory='the current'
      else
-          preposition=to
           directory=another
      fi
 
@@ -194,12 +190,11 @@ case $? in
      #
      $command "$item" "$dest" || exit $?
 
-     # display warning
+     # display explanation
      #
-     if [ "$warning" != no ] ;then
-          printf "$NAME: warning: $action one item "
-          echo $preposition $directory directory
-     fi >&2
+     if [ "$quiet" != yes ] ;then
+          echo "$NAME: $action one item $preposition $directory directory" >&2
+     fi
      exit 0
 esac
 
@@ -208,19 +203,18 @@ esac
 count=0
 for arg ;do
      count=`expr $count + 1`
-     if [ $count -ne $# ] ;then
-          checkSimple "$arg" 2> /dev/null
+     test $count -eq $# && exit 0
+     checkSimple "$arg" 2> /dev/null
+     case $? in
+       1 | 3)
+          checkSimple "$arg"
+          ;;
+       *)
+          item=`basename "$arg"`
+          checkSimple "$dest/$item" 2> /dev/null
           case $? in
-            1 | 3)
-               checkSimple "$arg"
-               ;;
-            *)
-               item=`basename "$arg"`
-               checkSimple "$dest/$item" 2> /dev/null
-               case $? in
-                 1) $command "$arg" "$dest" ;;
-                 *) echo "$NAME: $dest/$item: already exists" >&2 ;;
-               esac
+            1) $command "$arg" "$dest" ;;
+            *) echo "$NAME: $dest/$item: already exists" >&2
           esac
-     fi
+     esac
 done
