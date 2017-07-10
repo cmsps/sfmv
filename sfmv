@@ -1,12 +1,13 @@
 #!/bin/sh
 #
-# sfcp file | dir newName  - safe cp (copy)
-# sfmv file | dir newName  - safe mv (rename)
+# sfmv item ... dir - safely move files and/or directories to dir
+# sfcp item ... dir - safely copy files and/or directories to dir
 #
-# sfcp item ... dir - safe cp files and / or dirs to dir
-# sfmv item ... dir - safe mv files and / or dirs to dir
+# sfmv file | dir        newName - safe rename
+# sfmv file | dir   path/newName - safe move and rename
+# sfcp file | dir [path/]newName - safe copy
 #
-# Sun Jun 18 13:22:20 BST 2017
+# Sun Jul 9 12:50:05 BST 2017
 #
 
 
@@ -29,26 +30,26 @@ Licence
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-Description
------------
-  `sfmv' is a safe version of the `mv' command; it does not overwrite
-  existing files or directories.  It issues error messages when problems
-  occur.  If it is run under a name ending with "cp" it is a safe version
-  of the `cp' command.
-
-  Also, `sfmv' warns what the effect of the command was when there are
-  only two arguments and the second is not a directory.
-
 Rationale
 ---------
   You can use the -n or --no-clobber option of `mv' or `cp' to avoid
-  overwriting existing files.  However, those commands do not notify
-  you that they have failed to move or copy something.  `sfmv' issues
-  an error message in such a case.
+  overwriting existing files.  However, those commands do not tell you
+  they have failed to move or copy something; `sfmv' gives an error
+  message in such a case.
 
-  Also, `mv' is overloaded in that it does renames as well as moves.
-  For clarity, `sfmv' issues a explanation when it does more than move
-  or copy a file to a directory given as the last argument.
+Description
+-----------
+  `sfmv' is a safe version of the `mv' command.  It does not overwrite
+  existing files or directories.  It displays error messages when
+  problems occur.  If it is run under a name ending with "cp" it is a
+  safe version of the `cp' command.
+
+  The `mv' command is overloaded in that it does renames as well as moves.
+  For clarity, `sfmv' gives an explanation when the second of only two
+  arguments is not a directory.
+
+  `sfmv' gives a non-zero exit code if it, or the underlying `mv' or `cp'
+  commands, issued any error messages.
 
 
 ______________D__O__C__U__M__E__N__T__A__T__I__O__N_____________
@@ -58,12 +59,12 @@ ______________D__O__C__U__M__E__N__T__A__T__I__O__N_____________
 #
 usage(){
   cat <<-! >&2
-	Usage: $NAME [ -qh ] file | dir newName
-	   or: $NAME [ -qh ] item ... dir
+	Usage: $NAME [ -qh ] item ... dir
+	   or: $NAME [ -qh ] file | dir newName
 
 	Options:
 	  -h  this help
-	  -q  quiet -- no explanations
+	  -q  quiet -- no explanation
 	!
   exit 1
 }
@@ -139,7 +140,7 @@ for arg ;do
      dest="$arg"
 done
 
-# deal with destination that is not an existing dir (and finish)
+# deal with destination that is not an existing dir
 #
 checkSimple "$dest" 2> /dev/null
 case $? in       # 0=ok; 1=nosuch; 3=unreadable; 4=empty
@@ -165,7 +166,7 @@ case $? in       # 0=ok; 1=nosuch; 3=unreadable; 4=empty
           exit `expr $? + 10`
      esac
 
-     # check dir of destination exists (it may only be `.')
+     # check dir of destination exists (it may simply be `.')
      #
      destDir=`dirname "$dest"`
      if [ ! -d "$destDir" ] ;then
@@ -173,50 +174,56 @@ case $? in       # 0=ok; 1=nosuch; 3=unreadable; 4=empty
           exit 6
      fi
 
-     # work out type of copy / rename / move
-     #
-     sourceDir=`dirname "$item"`
-     if [ "$sourceDir" != "$destDir" ] ;then
-          preposition=to
-     else
-          preposition=in
-          test $action = moved && action=renamed
-     fi
-     if [ "$destDir" = . ] ;then
-          directory='the current'
-     else
-          directory=another
-     fi
-
      # do simple command
      #
-     $command "$item" "$dest" || exit $?
+     $command "$item" "$dest" || exit 7
 
-     # display explanation
+     # if needed, work out type of copy / rename / move and display it
      #
-     if [ "$quiet" != yes ] ;then
+     if [ ! "$quiet" ] ;then
+          destName=`basename "$dest"`
+          sourceDir=`dirname "$item"`
+          sourceName=`basename "$item"`
+          if [ "$sourceDir" = "$destDir" ] ;then
+               preposition=in
+               test $action = moved && action=renamed
+          elif [ "$destName" = "$sourceName" ] ;then
+               preposition=to
+          else
+               preposition='under a new name to'
+          fi
+          if [ "$destDir" = . ] ;then
+               directory='the current'
+          else
+               directory=another
+          fi
           echo "$NAME: $action one item $preposition $directory directory" >&2
      fi
+
+     # done the only "move" so stop
+     #
      exit 0
 esac
 
 # process all arguments but last one
 #
 count=0
-for arg ;do
+for item ;do
      count=`expr $count + 1`
-     test $count -eq $# && exit 0
-     checkSimple "$arg" 2> /dev/null
+     test $count -eq $# && break
+     checkSimple "$item" 2> /dev/null
      case $? in      # 1=nosuch; 3=unreadable
        1 | 3)
-          checkSimple "$arg"
+          checkSimple "$item"
           ;;
        *)
-          item=`basename "$arg"`
-          checkSimple "$dest/$item" 2> /dev/null
+          destName=`basename "$item"`
+          checkSimple "$dest/$destName" 2> /dev/null
           case $? in    # 1=nosuch
-            1) $command "$arg" "$dest" ;;
-            *) echo "$NAME: $dest/$item: already exists" >&2
+            1) $command "$item" "$dest" || exit 8 ;;
+            *) echo "$NAME: $dest/$destName: already exists" >&2
+               errors=yes
           esac
      esac
 done
+test "$errors" && exit 9
