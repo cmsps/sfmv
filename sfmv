@@ -3,17 +3,16 @@
 # sfmv item ... dir - safely move files and/or directories to dir
 # sfcp item ... dir - safely copy files and/or directories to dir
 #
-# sfmv file | dir        newName - safe rename
-# sfmv file | dir   path/newName - safe move and rename
-# sfcp file | dir [path/]newName - safe copy
+# sfmv item [path/]newName - safe [ move and ] rename
+# sfcp item [path/]newName - safe copy
 #
-# Sun Jul 9 12:50:05 BST 2017
+# Wed May 2 22:24:17 BST 2018
 #
 
 
 <<'______________D__O__C__U__M__E__N__T__A__T__I__O__N_____________'
 
-Copyright (C) 2018 Peter Scott - peterscott@pobox.com
+Copyright (C) 2019 Peter Scott - peterscott@pobox.com
 
 Licence
 -------
@@ -60,10 +59,10 @@ ______________D__O__C__U__M__E__N__T__A__T__I__O__N_____________
 usage(){
   cat <<-! >&2
 	Usage: $NAME [ -qh ] item ... dir
-	   or: $NAME [ -qh ] file | dir newName
+	   or: $NAME [ -qh ] item [path/]newName
 
 	Options:
-	  -h  this help
+	  -h  display this help and exit
 	  -q  quiet -- no explanation
 	!
   exit 1
