@@ -6,7 +6,7 @@
 # sfmv item [path/]newName - safe [ move and ] rename
 # sfcp item [path/]newName - safe copy
 #
-# Wed May 2 22:24:17 BST 2018
+# Sun Jul 21 13:28:22 BST 2019
 #
 
 
@@ -45,7 +45,7 @@ Description
 
   The `mv' command is overloaded in that it does renames as well as moves.
   For clarity, `sfmv' gives an explanation when the second of only two
-  arguments is not a directory.
+  arguments is not an existing directory.
 
   `sfmv' gives a non-zero exit code if it, or the underlying `mv' or `cp'
   commands, issued any error messages.
@@ -63,7 +63,8 @@ usage(){
 
 	Options:
 	  -h  display this help and exit
-	  -q  quiet -- no explanation
+	  -q  quiet -- no explanation when last argument
+	               is not an existing directrory
 	!
   exit 1
 }
