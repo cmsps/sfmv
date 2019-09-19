@@ -6,9 +6,8 @@
 # sfmv item [path/]newName - safe [ move and ] rename
 # sfcp item [path/]newName - safe copy
 #
-# Sun Jul 21 13:28:22 BST 2019
+# Thu Sep 19 19:15:28 BST 2019
 #
-
 
 <<'______________D__O__C__U__M__E__N__T__A__T__I__O__N_____________'
 
@@ -50,9 +49,7 @@ Description
   `sfmv' gives a non-zero exit code if it, or the underlying `mv' or `cp'
   commands, issued any error messages.
 
-
 ______________D__O__C__U__M__E__N__T__A__T__I__O__N_____________
-
 
 # usage - display usage message
 #
@@ -64,7 +61,7 @@ usage(){
 	Options:
 	  -h  display this help and exit
 	  -q  quiet -- no explanation when last argument
-	               is not an existing directrory
+	               is not an existing directory
 	!
   exit 1
 }
