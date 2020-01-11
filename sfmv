@@ -6,12 +6,12 @@
 # sfmv item [path/]newName - safe [ move and ] rename
 # sfcp item [path/]newName - safe copy
 #
-# Thu Sep 19 19:15:28 BST 2019
+# Sat Oct 5 22:35:26 BST 2019
 #
 
 <<'______________D__O__C__U__M__E__N__T__A__T__I__O__N_____________'
 
-Copyright (C) 2019 Peter Scott - peterscott@pobox.com
+Copyright (C) 2020 Peter Scott - peterscott@pobox.com
 
 Licence
 -------
@@ -194,7 +194,7 @@ case $? in       # 0=ok; 1=nosuch; 3=unreadable; 4=empty
           else
                directory=another
           fi
-          echo "$NAME: $action one item $preposition $directory directory" >&2
+          echo "$NAME: $action an item $preposition $directory directory" >&2
      fi
 
      # done the only "move" so stop
