@@ -6,7 +6,7 @@
 # sfmv item [path/]newName - safe [ move and ] rename
 # sfcp item [path/]newName - safe copy
 #
-# Sun Aug 1 13:00:36 BST 2021
+# Sun Aug 1 14:05:51 BST 2021
 #
 
 <<'______________D__O__C__U__M__E__N__T__A__T__I__O__N_____________'
@@ -93,7 +93,7 @@ checkSimple(){
 
 
 # prevent the user giving the script a name containing white space
-# -- saving the hassle of quoting internal file names
+# -- saving the hassle of quoting internal file names (if any)
 #
 NAME=`basename "$0"`
 words=`echo "$NAME" | wc -w`
@@ -163,15 +163,15 @@ case $? in       # 0=ok; 1=nosuch; 3=unreadable; 4=empty
           exit `expr $? + 10`
      esac
 
-     # check dir of destination exists (it may simply be `.')
+     # dest could be directory/file; check directory exists
      #
-     destDir=`dirname "$dest"`
+     destDir=`dirname "$dest"`        # it might be "."
      if [ ! -d "$destDir" ] ;then
           echo "$NAME: $destDir: not an existing directory" >&2
           exit 6
      fi
 
-     # do simple command
+     # do the actual mv or cp command
      #
      $command "$item" "$dest" || exit 7
 
