@@ -6,7 +6,7 @@
 # sfmv item [path/]newName - safe [ move and ] rename
 # sfcp item [path/]newName - safe copy
 #
-# Sat Oct 5 22:35:26 BST 2019
+# Sun Aug 1 13:00:36 BST 2021
 #
 
 <<'______________D__O__C__U__M__E__N__T__A__T__I__O__N_____________'
@@ -202,7 +202,7 @@ case $? in       # 0=ok; 1=nosuch; 3=unreadable; 4=empty
      exit 0
 esac
 
-# process all arguments but last one
+# last argument is an existing directory -- process all arguments before it
 #
 count=0
 for item ;do
