@@ -6,7 +6,7 @@
 # sfmv item [path/]newName - safe [ move and ] rename
 # sfcp item [path/]newName - safe copy
 #
-# Mon Aug 2 22:35:20 BST 2021
+# Wed Mar 12 17:42:43 GMT 2025
 #
 
 <<'______________D__O__C__U__M__E__N__T__A__T__I__O__N_____________'
@@ -39,8 +39,8 @@ Description
 -----------
   `sfmv' is a safe version of the `mv' command.  It does not overwrite
   existing files or directories.  It displays error messages when
-  problems occur.  If it is run under a name ending with "cp" it is a
-  safe version of the `cp' command.
+  problems occur.  If it is run under a name ending or starting with
+  "cp" it is a safe version of the `cp' command.
 
   The `mv' command is overloaded in that it does renames as well as moves.
   For reassurance, `sfmv' gives an explanation when the last argument
@@ -105,16 +105,16 @@ fi
 # moving or copying?
 #
 case $NAME in
-  *cp)
+  *cp | cp*)
      command='cp -r'   # items may be dirs
      action=copied
      ;;
-  *mv)
+  *mv | mv*)
      command=mv
      action=moved
      ;;
   *)
-     echo "\`$NAME': must end with \`cp' or \`mv'" >&2
+     echo "\`$NAME': must begin or end with \`cp' or \`mv'" >&2
      exit 5
 esac
 
